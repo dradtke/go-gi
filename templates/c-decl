@@ -1,0 +1,1 @@
+	var {{.CName}} {{if .Info.GetType.IsPointer}}*{{end}}{{.CType}}

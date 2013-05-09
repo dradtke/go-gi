@@ -1,0 +1,4 @@
+func {{.GoName}}({{.Arglist false}}) ({{.Retlist}}) {
+{{.ArgMarshalBody}}	{{if .ReturnsValue}}{{.CRet.CName}}, _ := {{end}}C.{{.CName}}({{.MarshaledValues}})
+{{.RetMarshalBody}}}
+

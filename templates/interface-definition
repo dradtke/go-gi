@@ -1,0 +1,4 @@
+interface {{.InterfaceName}} {
+	{{.CastFunc}}() *C.{{.CType}}
+}
+

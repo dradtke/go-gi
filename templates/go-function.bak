@@ -1,0 +1,3 @@
+func {{.GoName}}({{if .Owner}}self {{.Owner.InterfaceName}}{{end}}{{range $i, $arg := .Args}}{{if or $i .Owner}}, {{end}}{{.Name}} {{.GoType}}{{end}}) ({{range $i, $ret := .Rets}}{{if $i}}, {{end}}{{.Name}} {{.GoType}}{{end}}) {
+}
+

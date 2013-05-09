@@ -1,0 +1,4 @@
+func (self *{{.ObjectName}}) {{.CastFunc}}() {
+	return (*C.{{.CType}})(self.ptr)
+}
+
