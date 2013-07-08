@@ -1,4 +1,4 @@
-package main
+package gogi
 
 /*
 #cgo pkg-config: glib-2.0
