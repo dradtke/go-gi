@@ -170,6 +170,11 @@ func writeMethods(def *ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmp
 			methodName = newDef.ObjectName + "." + name
 			if !(*exists)[methodName] {
 				tmpl.ExecuteTemplate(code, "go-function", fn)
+				if symbol == "g_object_is_floating" {
+					fmt.Println("found it!")
+					fmt.Printf("owned: %b\n", fn.HasOwner())
+					fmt.Printf("number of args: %d\n", fn.Info.GetNArgs())
+				}
 			}
 			(*exists)[methodName] = true
 		}
@@ -352,6 +357,12 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 			}
 			if ctype, ok = TypeTagToC[tag]; !ok {
 				return nil, nil, nil, nil, marshalError
+			}
+
+			// check if it's a quark
+			// TODO: there HAS to be a better way than this...
+			if tag == Uint32Tag && name == "quark" {
+				ctype = "GQuark"
 			}
 		}
 

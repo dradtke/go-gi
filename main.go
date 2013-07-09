@@ -108,7 +108,7 @@ func main() {
 		if data, err := ioutil.ReadAll(f); err == nil {
 			lines := strings.Split(string(data), "\n")
 			for _, line := range lines {
-				if line[0:1] == "#" {
+				if len(line) == 0 || line[0:1] == "#" {
 					continue
 				}
 				blacklist[line] = true
