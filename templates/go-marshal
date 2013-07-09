@@ -1,0 +1,2 @@
+	var {{.Name}} {{if .IsPointer}}*{{end}}{{.GoType}}
+	// TODO: marshal

@@ -1,4 +1,4 @@
 func (self *{{.Owner.ObjectName}}) {{.GoName}}({{.Arglist true}}) ({{.Retlist}}) {
-	{{.GoName}}(self{{range .ForGo.Args}}, {{.Name}}{{end}})
+	priv{{.ClassName}}{{.GoName}}(self{{range .ForGo.Args}}, {{.Name}}{{end}})
 }
 

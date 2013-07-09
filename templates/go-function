@@ -1,4 +1,4 @@
-func {{.GoName}}({{.Arglist false}}) ({{.Retlist}}) {
+func {{if .HasOwner}}priv{{.Owner.ObjectName}}{{.GoName}}{{else}}{{.GoName}}{{end}}({{.Arglist false}}) ({{.Retlist}}) {
 {{.ArgMarshalBody}}	{{if .ReturnsValue}}{{.CRet.CName}}, _ := {{end}}C.{{.CName}}({{.MarshaledValues}})
 {{.RetMarshalBody}}}
 

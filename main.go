@@ -71,11 +71,7 @@ func main() {
 	}
 
 	var code bytes.Buffer
-	tmpl, err := template.ParseGlob(filepath.Join(giTemplates, "*"))
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	tmpl := template.Must(template.New("go-gi").ParseGlob(filepath.Join(giTemplates, "*")))
 
 	code.WriteString("package " + ns + "\n\n")
 

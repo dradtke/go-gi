@@ -3,6 +3,7 @@ package main
 import (
 	"container/list"
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 	"text/template"
@@ -79,21 +80,39 @@ func ProcessObject(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template) 
 	implementAll(def, info, code, tmpl)
 
 	// object methods
+	writeMethods(def, info, code, tmpl, "")
 
+	for hasParent(info) {
+		info = info.GetParent()
+		writeMethods(def, info, code, tmpl, info.GetName())
+	}
+}
+
+func writeMethods(def ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, className string) {
 	numMethods := info.GetNObjectMethods()
 	for i := 0; i < numMethods; i++ {
 		method := info.GetObjectMethod(i)
 		flags := method.GetFunctionFlags()
 
-		goargs, gorets, cargs, crets := readParams(method, flags)
+		goargs, gorets, cargs, crets, err := readParams(method, flags)
+		if err != nil {
+			// TODO: log this
+			continue
+		}
+
 		fn := FunctionDefinition{
 			Name:method.GetName(),
 			Owner:&def,
+			ClassName:def.ObjectName,
 			ForGo:ArgsAndRets{Args:goargs, Rets:gorets},
 			ForC:ArgsAndRets{Args:cargs, Rets:crets},
 			Flags:flags,
 			Info:method,
 		}
+		if className != "" {
+			fn.ClassName = className
+		}
+
 		var marshal bytes.Buffer
 		for _, param := range cargs {
 			switch param.Dir {
@@ -104,19 +123,13 @@ func ProcessObject(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template) 
 		fn.ArgMarshalBody = marshal.String()
 		marshal.Reset()
 		for _, ret := range crets {
-			tmpl.ExecuteTemplate(&marshal, "c-marshal", ret)
+			tmpl.ExecuteTemplate(&marshal, "go-marshal", ret)
 		}
 		fn.RetMarshalBody = marshal.String()
-		tmpl.ExecuteTemplate(code, "go-function", fn)
-
-		// inherit this method
-		class := info
-		for hasParent(class) {
-			tmp := class.GetObjectDefinition()
-			fn.Owner = &tmp
-			tmpl.ExecuteTemplate(code, "go-function-wrapper", fn)
-			class = class.GetParent()
+		if className == "" {
+			tmpl.ExecuteTemplate(code, "go-function", fn)
 		}
+		tmpl.ExecuteTemplate(code, "go-function-wrapper", fn)
 	}
 }
 
@@ -147,6 +160,7 @@ type ArgsAndRets struct {
 type FunctionDefinition struct {
 	Name string
 	Owner *ObjectDefinition
+	ClassName string
 	ForGo ArgsAndRets
 	ForC ArgsAndRets
 	ArgMarshalBody string
@@ -161,6 +175,10 @@ func (def FunctionDefinition) GoName() string {
 
 func (def FunctionDefinition) CName() string {
 	return def.Info.GetSymbol()
+}
+
+func (def FunctionDefinition) HasOwner() bool {
+	return def.Owner != nil
 }
 
 func (def FunctionDefinition) ReturnsValue() bool {
@@ -243,7 +261,7 @@ func returnsValue(typ *BaseInfo) bool {
 	return typ.IsPointer() || typ.GetTag() != VoidTag
 }
 
-func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, []Parameter, []Parameter) {
+func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, []Parameter, []Parameter, error) {
 	goargList := list.New()
 	goretList := list.New()
 	cargList := list.New()
@@ -257,10 +275,10 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 		)
 		tag := ret.GetTag()
 		if gotype, ok = TypeTagToGo[tag]; !ok {
-			gotype = "<none>"
+			return nil, nil, nil, nil, errors.New("couldn't marshal type")
 		}
 		if ctype, ok = TypeTagToC[tag]; !ok {
-			ctype = "<none>"
+			return nil, nil, nil, nil, errors.New("couldn't marshal type")
 		}
 		cretList.PushBack(Parameter{Name:"retval", Dir:Out, GoType:gotype, CType:ctype, Info:nil})
 	}
@@ -277,10 +295,10 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 		)
 		tag := param.GetType().GetTag()
 		if gotype, ok = TypeTagToGo[tag]; !ok {
-			gotype = "<none>"
+			return nil, nil, nil, nil, errors.New("couldn't marshal type")
 		}
 		if ctype, ok = TypeTagToC[tag]; !ok {
-			ctype = "<none>"
+			return nil, nil, nil, nil, errors.New("couldn't marshal type")
 		}
 
 		p := Parameter{Name:name, Dir:dir, GoType:gotype, CType:ctype, Info:param}
@@ -317,5 +335,5 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 		cRets[i] = e.Value.(Parameter)
 	}
 
-	return goArgs, goRets, cArgs, cRets
+	return goArgs, goRets, cArgs, cRets, nil
 }
