@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"text/template"
 )
@@ -23,7 +24,11 @@ type EnumValue struct {
 	Value    int64
 }
 
-func ProcessEnum(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template) {
+func ProcessEnum(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, blacklist *map[string] bool) {
+	if info.IsDeprecated() {
+		return
+	}
+
 	name := info.GetName()
 	prefix := GetCPrefix(info.GetNamespace())
 	def := &EnumDefinition{EnumName:name, CType:prefix+name}
@@ -48,20 +53,26 @@ type ObjectDefinition struct {
 	InterfaceName string
 	CType         string
 	CastFunc      string
+	Namespace     string
 }
 
 func (info *BaseInfo) GetObjectDefinition() ObjectDefinition {
-	name := info.GetName()
-	prefix := GetCPrefix(info.GetNamespace())
+	name, namespace := info.GetName(), info.GetNamespace()
+	prefix := GetCPrefix(namespace)
 	return ObjectDefinition{
 		ObjectName:    name,
 		InterfaceName: name + "Like",
 		CType:         prefix + name,
-		CastFunc:      "As" + name,
+		CastFunc:      "as" + namespace + name,
+		Namespace:     namespace,
 	}
 }
 
-func ProcessObject(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template) {
+func ProcessObject(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, exists *map[string] bool, blacklist *map[string] bool) {
+	if info.IsDeprecated() {
+		return
+	}
+
 	var err error
 	def := info.GetObjectDefinition()
 
@@ -78,28 +89,39 @@ func ProcessObject(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template) 
 	}
 
 	implementAll(def, info, code, tmpl)
-
-	// object methods
-	methodMap := make(map[string] bool)
-	writeMethods(def, info, code, tmpl, methodMap, "")
+	writeMethods(&def, info, code, tmpl, exists, blacklist, "")
 
 	for hasParent(info) {
 		info = info.GetParent()
-		writeMethods(def, info, code, tmpl, methodMap, info.GetName())
+		writeMethods(&def, info, code, tmpl, exists, blacklist, info.GetName())
+		if info.GetNamespace() != def.Namespace {
+			name := info.GetName()
+			if !(*exists)[name] {
+				tmpl.ExecuteTemplate(code, "interface-definition", info.GetObjectDefinition())
+			}
+			(*exists)[name] = true
+		}
 	}
 }
 
-func writeMethods(def ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, methods map[string] bool, className string) {
+func writeMethods(def *ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, exists *map[string] bool, blacklist *map[string] bool, className string) {
 	numMethods := info.GetNObjectMethods()
 	for i := 0; i < numMethods; i++ {
 		method := info.GetObjectMethod(i)
+		symbol := method.GetSymbol()
+
+		if (*blacklist)[symbol] || method.IsDeprecated() {
+			continue
+		}
+
 		flags := method.GetFunctionFlags()
 		name := method.GetName()
 
-		if methods[name] {
+		methodName := def.ObjectName + "." + name
+		if (*exists)[methodName] {
 			continue
 		}
-		methods[name] = true
+		(*exists)[methodName] = true
 
 		goargs, gorets, cargs, crets, err := readParams(method, flags)
 		if err != nil {
@@ -109,7 +131,7 @@ func writeMethods(def ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl
 
 		fn := FunctionDefinition{
 			Name:name,
-			Owner:&def,
+			Owner:def,
 			ClassName:def.ObjectName,
 			ForGo:ArgsAndRets{Args:goargs, Rets:gorets},
 			ForC:ArgsAndRets{Args:cargs, Rets:crets},
@@ -133,10 +155,24 @@ func writeMethods(def ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl
 			tmpl.ExecuteTemplate(&marshal, "go-marshal", ret)
 		}
 		fn.RetMarshalBody = marshal.String()
-		if className == "" {
-			tmpl.ExecuteTemplate(code, "go-function", fn)
-		}
+
 		tmpl.ExecuteTemplate(code, "go-function-wrapper", fn)
+		if className == "" {
+			err := tmpl.ExecuteTemplate(code, "go-function", fn)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
+		} else if info.GetNamespace() != def.Namespace {
+			// need to implement methods for objects that aren't in this namespace
+			newDef := info.GetObjectDefinition()
+			fn.Owner = &newDef
+			fn.ClassName = fn.Owner.ObjectName
+			methodName = newDef.ObjectName + "." + name
+			if !(*exists)[methodName] {
+				tmpl.ExecuteTemplate(code, "go-function", fn)
+			}
+			(*exists)[methodName] = true
+		}
 	}
 }
 
@@ -221,7 +257,7 @@ func (def FunctionDefinition) MarshaledValues() string {
 	index := 0
 	if (def.Owner != nil) {
 		result = make([]string, len(def.ForC.Args) + 1)
-		result[index] = "self.As" + def.Owner.ObjectName + "()"
+		result[index] = "self." + def.Owner.CastFunc + "()"
 		index++
 	} else {
 		result = make([]string, len(def.ForC.Args))

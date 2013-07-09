@@ -35,7 +35,7 @@ func main() {
 	namespace := os.Args[1]
 	ns := strings.ToLower(namespace)
 
-	fmt.Println("generating " + namespace + " bindings...")
+	fmt.Println("[*] Generating " + namespace + " bindings...")
 	// TODO: support specifying the namespace version
 	typelib, err := LoadNamespace(namespace, "")
 	if err != nil {
@@ -47,8 +47,9 @@ func main() {
 	srcRel := filepath.Join("src", "github.com", "dradtke", "go-gi")
 	giSnippetsRel := filepath.Join(srcRel, "snippets")
 	giTemplatesRel := filepath.Join(srcRel, "templates")
+	giBlacklistRel := filepath.Join(srcRel, "blacklist")
 	outputDirRel := filepath.Join("src", "gi", ns)
-	var giSnippets, giTemplates, outputDir string
+	var giSnippets, giTemplates, giBlacklist, outputDir string
 
 	// find a) the templates directory, and b) a place to put output files
 	gopath := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
@@ -63,6 +64,12 @@ func main() {
 			f := filepath.Join(dir, giTemplatesRel)
 			if _, err := os.Stat(f); !os.IsNotExist(err) {
 				giTemplates = f
+			}
+		}
+		if giBlacklist == "" {
+			f := filepath.Join(dir, giBlacklistRel)
+			if _, err := os.Stat(f); !os.IsNotExist(err) {
+				giBlacklist = f
 			}
 		}
 		if outputDir == "" {
@@ -96,17 +103,33 @@ func main() {
 		return
 	}
 
+	blacklist := make(map[string] bool)
+	if f, err := os.Open(filepath.Join(giBlacklist, ns)); err == nil {
+		if data, err := ioutil.ReadAll(f); err == nil {
+			lines := strings.Split(string(data), "\n")
+			for _, line := range lines {
+				if line[0:1] == "#" {
+					continue
+				}
+				blacklist[line] = true
+			}
+		}
+	}
+
 	var code bytes.Buffer
 	code.Write(header)
 
 	tmpl := template.Must(template.New("go-gi").ParseGlob(filepath.Join(giSnippets, "*")))
 
+	// used to prevent duplicate methods, interfaces, etc.
+	exists := make(map[string] bool)
+
 	n := GetNumInfos(namespace)
 	for i := 0; i < n; i++ {
 		info := GetInfo(namespace, i)
 		switch info.Type {
-			case Enum: ProcessEnum(info, &code, tmpl)
-			case Object: ProcessObject(info, &code, tmpl)
+			case Enum: ProcessEnum(info, &code, tmpl, &blacklist)
+			case Object: ProcessObject(info, &code, tmpl, &exists, &blacklist)
 		}
 		info.Free()
 	}
@@ -118,6 +141,6 @@ func main() {
 
 	code.WriteTo(file)
 	file.Close()
-	fmt.Println("bindings written to " + file.Name())
-	fmt.Println("run \"go build gi/" + ns + "\" to compile them")
+	fmt.Println("[*] Bindings written to " + file.Name())
+	fmt.Println("[*] Run \"go build gi/" + ns + "\" to compile them.")
 }
