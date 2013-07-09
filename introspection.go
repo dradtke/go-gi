@@ -1,4 +1,4 @@
-package gogi
+package main
 
 /*
 #cgo pkg-config: glib-2.0 gobject-introspection-1.0

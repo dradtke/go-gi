@@ -1,4 +1,4 @@
-package gogi
+package main
 
 import (
 	"container/list"
