@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"text/template"
 )
 
@@ -37,7 +38,8 @@ func main() {
 	defer FreeTypelib(typelib)
 
 	var code bytes.Buffer
-	tmpl, err := template.ParseGlob("templates/*")
+	giTemplates := Search(os.Getenv("GOPATH"), filepath.Join("src", "github.com", "dradtke", "go-gi", "templates"))
+	tmpl, err := template.ParseGlob(filepath.Join(giTemplates, "*"))
 	if err != nil {
 		fmt.Println(err.Error())
 		return
