@@ -1,0 +1,5 @@
+type {{.EnumName}} C.{{.CType}}
+const (
+{{range .Values}}	{{.EnumName}}{{.Name}} {{.EnumName}} = {{.Value}}
+{{end}})
+

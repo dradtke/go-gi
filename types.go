@@ -6,6 +6,9 @@ package main
 */
 import "C"
 
+const GoVoidPointer = "interface{}"
+const CVoidPointer = "gpointer"
+
 var TypeTagToGo = map[TypeTag] string {
 	VoidTag:     "",
 	BooleanTag:  "bool",

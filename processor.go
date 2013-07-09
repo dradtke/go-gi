@@ -80,19 +80,26 @@ func ProcessObject(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template) 
 	implementAll(def, info, code, tmpl)
 
 	// object methods
-	writeMethods(def, info, code, tmpl, "")
+	methodMap := make(map[string] bool)
+	writeMethods(def, info, code, tmpl, methodMap, "")
 
 	for hasParent(info) {
 		info = info.GetParent()
-		writeMethods(def, info, code, tmpl, info.GetName())
+		writeMethods(def, info, code, tmpl, methodMap, info.GetName())
 	}
 }
 
-func writeMethods(def ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, className string) {
+func writeMethods(def ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, methods map[string] bool, className string) {
 	numMethods := info.GetNObjectMethods()
 	for i := 0; i < numMethods; i++ {
 		method := info.GetObjectMethod(i)
 		flags := method.GetFunctionFlags()
+		name := method.GetName()
+
+		if methods[name] {
+			continue
+		}
+		methods[name] = true
 
 		goargs, gorets, cargs, crets, err := readParams(method, flags)
 		if err != nil {
@@ -101,7 +108,7 @@ func writeMethods(def ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl
 		}
 
 		fn := FunctionDefinition{
-			Name:method.GetName(),
+			Name:name,
 			Owner:&def,
 			ClassName:def.ObjectName,
 			ForGo:ArgsAndRets{Args:goargs, Rets:gorets},
@@ -266,6 +273,7 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 	goretList := list.New()
 	cargList := list.New()
 	cretList := list.New()
+	marshalError := errors.New("couldn't marshal type")
 
 	ret := info.GetReturnType()
 	if returnsValue(ret) {
@@ -274,11 +282,16 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 			ok bool
 		)
 		tag := ret.GetTag()
-		if gotype, ok = TypeTagToGo[tag]; !ok {
-			return nil, nil, nil, nil, errors.New("couldn't marshal type")
-		}
-		if ctype, ok = TypeTagToC[tag]; !ok {
-			return nil, nil, nil, nil, errors.New("couldn't marshal type")
+		if tag == VoidTag && ret.IsPointer() {
+			gotype = GoVoidPointer
+			ctype = CVoidPointer
+		} else {
+			if gotype, ok = TypeTagToGo[tag]; !ok {
+				return nil, nil, nil, nil, marshalError
+			}
+			if ctype, ok = TypeTagToC[tag]; !ok {
+				return nil, nil, nil, nil, marshalError
+			}
 		}
 		cretList.PushBack(Parameter{Name:"retval", Dir:Out, GoType:gotype, CType:ctype, Info:nil})
 	}
@@ -294,11 +307,16 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 			ok bool
 		)
 		tag := param.GetType().GetTag()
-		if gotype, ok = TypeTagToGo[tag]; !ok {
-			return nil, nil, nil, nil, errors.New("couldn't marshal type")
-		}
-		if ctype, ok = TypeTagToC[tag]; !ok {
-			return nil, nil, nil, nil, errors.New("couldn't marshal type")
+		if tag == VoidTag && param.GetType().IsPointer() {
+			gotype = GoVoidPointer
+			ctype = CVoidPointer
+		} else {
+			if gotype, ok = TypeTagToGo[tag]; !ok {
+				return nil, nil, nil, nil, marshalError
+			}
+			if ctype, ok = TypeTagToC[tag]; !ok {
+				return nil, nil, nil, nil, marshalError
+			}
 		}
 
 		p := Parameter{Name:name, Dir:dir, GoType:gotype, CType:ctype, Info:param}

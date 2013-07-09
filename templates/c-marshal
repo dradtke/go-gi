@@ -1,2 +1,0 @@
-	var {{.CName}} {{if .IsPointer}}*{{end}}{{.CType}}
-	// TODO: marshal

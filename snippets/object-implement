@@ -1,0 +1,4 @@
+func (self *{{.ObjectName}}) {{.CastFunc}}() (*C.{{.CType}}) {
+	return (*C.{{.CType}})(unsafe.Pointer(self))
+}
+

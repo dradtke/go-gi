@@ -13,6 +13,7 @@ import "C"
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -33,21 +34,31 @@ func main() {
 
 	namespace := os.Args[1]
 	ns := strings.ToLower(namespace)
+
 	fmt.Println("generating " + namespace + " bindings...")
-	typelib, err := LoadNamespace(namespace)
+	// TODO: support specifying the namespace version
+	typelib, err := LoadNamespace(namespace, "")
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		return
 	}
 	defer FreeTypelib(typelib)
 
-	gopath := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
-	giTemplatesRel := filepath.Join("src", "github.com", "dradtke", "go-gi", "templates")
+	srcRel := filepath.Join("src", "github.com", "dradtke", "go-gi")
+	giSnippetsRel := filepath.Join(srcRel, "snippets")
+	giTemplatesRel := filepath.Join(srcRel, "templates")
 	outputDirRel := filepath.Join("src", "gi", ns)
-	var giTemplates, outputDir string
+	var giSnippets, giTemplates, outputDir string
 
 	// find a) the templates directory, and b) a place to put output files
+	gopath := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
 	for _, dir := range gopath {
+		if giSnippets == "" {
+			f := filepath.Join(dir, giSnippetsRel)
+			if _, err := os.Stat(f); !os.IsNotExist(err) {
+				giSnippets = f
+			}
+		}
 		if giTemplates == "" {
 			f := filepath.Join(dir, giTemplatesRel)
 			if _, err := os.Stat(f); !os.IsNotExist(err) {
@@ -63,6 +74,9 @@ func main() {
 			}
 		}
 	}
+	if giSnippets == "" {
+		log.Fatal("snippet folder not found")
+	}
 	if giTemplates == "" {
 		log.Fatal("template folder not found")
 	}
@@ -70,10 +84,22 @@ func main() {
 		log.Fatal("no writable output directory found")
 	}
 
-	var code bytes.Buffer
-	tmpl := template.Must(template.New("go-gi").ParseGlob(filepath.Join(giTemplates, "*")))
+	startingPoint, err := os.Open(filepath.Join(giTemplates, ns + ".go"))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
 
-	code.WriteString("package " + ns + "\n\n")
+	header, err := ioutil.ReadAll(startingPoint)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+
+	var code bytes.Buffer
+	code.Write(header)
+
+	tmpl := template.Must(template.New("go-gi").ParseGlob(filepath.Join(giSnippets, "*")))
 
 	n := GetNumInfos(namespace)
 	for i := 0; i < n; i++ {

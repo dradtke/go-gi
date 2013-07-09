@@ -12,10 +12,14 @@ import (
 
 var prefixes map[string] string = make(map[string] string)
 
-func LoadNamespace(namespace string) (*C.GITypelib, error) {
+func LoadNamespace(namespace, version string) (*C.GITypelib, error) {
 	ns := GlibString(namespace) ; defer FreeString(ns)
+	var v *C.gchar = nil
+	if version != "" {
+		v = GlibString(version) ; defer FreeString(v)
+	}
 	var err *C.GError
-	typelib := C.g_irepository_require(nil, ns, nil, 0, &err)
+	typelib := C.g_irepository_require(nil, ns, v, 0, &err)
 	if err != nil {
 		return nil, NewGError(err)
 	}

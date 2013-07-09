@@ -1,5 +1,0 @@
-type {{.EnumName}} C.{{.CType}}
-const (
-{{range .Values}}	{{.Name}} {{.EnumName}} = {{.Value}}
-{{end}})
-

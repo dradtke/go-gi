@@ -1,4 +1,0 @@
-type {{.ObjectName}} struct {
-	ptr *C.{{.CType}}
-}
-
