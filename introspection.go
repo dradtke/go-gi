@@ -10,13 +10,15 @@ import (
 	"strings"
 )
 
-var prefixes map[string] string = make(map[string] string)
+var prefixes map[string]string = make(map[string]string)
 
 func LoadNamespace(namespace, version string) (*C.GITypelib, error) {
-	ns := GlibString(namespace) ; defer FreeString(ns)
+	ns := GlibString(namespace)
+	defer FreeString(ns)
 	var v *C.gchar = nil
 	if version != "" {
-		v = GlibString(version) ; defer FreeString(v)
+		v = GlibString(version)
+		defer FreeString(v)
 	}
 	var err *C.GError
 	typelib := C.g_irepository_require(nil, ns, v, 0, &err)
@@ -31,12 +33,14 @@ func FreeTypelib(typelib *C.GITypelib) {
 }
 
 func GetNumInfos(namespace string) int {
-	ns := GlibString(namespace) ; defer FreeString(ns)
+	ns := GlibString(namespace)
+	defer FreeString(ns)
 	return GoInt(C.g_irepository_get_n_infos(nil, ns))
 }
 
 func GetInfo(namespace string, index int) *BaseInfo {
-	ns := GlibString(namespace) ; defer FreeString(ns)
+	ns := GlibString(namespace)
+	defer FreeString(ns)
 	i := GlibInt(index)
 	return NewBaseInfo(C.g_irepository_get_info(nil, ns, i))
 }
@@ -46,14 +50,15 @@ func GetCPrefix(namespace string) string {
 	if ok {
 		return prefix
 	}
-	ns := GlibString(namespace) ; defer FreeString(ns)
+	ns := GlibString(namespace)
+	defer FreeString(ns)
 	prefix = GoString(C.g_irepository_get_c_prefix(nil, ns))
 	prefixes[namespace] = prefix
 	return prefix
 }
 
 type GError struct {
-	Code int
+	Code    int
 	Message string
 }
 
@@ -63,31 +68,30 @@ func (self GError) Error() string {
 
 func NewGError(err *C.GError) GError {
 	defer C.g_error_free(err)
-	return GError{Code:GoInt(err.code), Message:GoString(err.message)}
+	return GError{Code: GoInt(err.code), Message: GoString(err.message)}
 }
 
-
-
 type InfoType C.GIInfoType
+
 const (
-	Function = C.GI_INFO_TYPE_FUNCTION
-	Callback = C.GI_INFO_TYPE_CALLBACK
-	Struct = C.GI_INFO_TYPE_STRUCT
-	Boxed = C.GI_INFO_TYPE_BOXED
-	Enum = C.GI_INFO_TYPE_ENUM
-	Flags = C.GI_INFO_TYPE_FLAGS
-	Object = C.GI_INFO_TYPE_OBJECT
+	Function  = C.GI_INFO_TYPE_FUNCTION
+	Callback  = C.GI_INFO_TYPE_CALLBACK
+	Struct    = C.GI_INFO_TYPE_STRUCT
+	Boxed     = C.GI_INFO_TYPE_BOXED
+	Enum      = C.GI_INFO_TYPE_ENUM
+	Flags     = C.GI_INFO_TYPE_FLAGS
+	Object    = C.GI_INFO_TYPE_OBJECT
 	Interface = C.GI_INFO_TYPE_INTERFACE
-	Constant = C.GI_INFO_TYPE_CONSTANT
+	Constant  = C.GI_INFO_TYPE_CONSTANT
 	//ErrorDomain = C.GI_INFO_TYPE_ERRORDOMAIN
-	Union = C.GI_INFO_TYPE_UNION
-	Value = C.GI_INFO_TYPE_VALUE
-	Signal = C.GI_INFO_TYPE_SIGNAL
-	VFunc = C.GI_INFO_TYPE_VFUNC
-	Property = C.GI_INFO_TYPE_PROPERTY
-	Field = C.GI_INFO_TYPE_FIELD
-	Arg = C.GI_INFO_TYPE_ARG
-	Type = C.GI_INFO_TYPE_TYPE
+	Union      = C.GI_INFO_TYPE_UNION
+	Value      = C.GI_INFO_TYPE_VALUE
+	Signal     = C.GI_INFO_TYPE_SIGNAL
+	VFunc      = C.GI_INFO_TYPE_VFUNC
+	Property   = C.GI_INFO_TYPE_PROPERTY
+	Field      = C.GI_INFO_TYPE_FIELD
+	Arg        = C.GI_INFO_TYPE_ARG
+	Type       = C.GI_INFO_TYPE_TYPE
 	Unresolved = C.GI_INFO_TYPE_UNRESOLVED
 )
 
@@ -96,7 +100,7 @@ func InfoTypeToString(typ InfoType) string {
 }
 
 type BaseInfo struct {
-	ptr *C.GIBaseInfo
+	ptr  *C.GIBaseInfo
 	Type InfoType
 }
 
@@ -110,29 +114,30 @@ func (info *BaseInfo) Free() {
 }
 
 type TypeTag C.GITypeTag
+
 const (
-	VoidTag = C.GI_TYPE_TAG_VOID
-	BooleanTag = C.GI_TYPE_TAG_BOOLEAN
-	Int8Tag = C.GI_TYPE_TAG_INT8
-	Uint8Tag = C.GI_TYPE_TAG_UINT8
-	Int16Tag = C.GI_TYPE_TAG_INT16
-	Uint16Tag = C.GI_TYPE_TAG_UINT16
-	Int32Tag = C.GI_TYPE_TAG_INT32
-	Uint32Tag = C.GI_TYPE_TAG_UINT32
-	Int64Tag = C.GI_TYPE_TAG_INT64
-	Uint64Tag = C.GI_TYPE_TAG_UINT64
-	FloatTag = C.GI_TYPE_TAG_FLOAT
-	DoubleTag = C.GI_TYPE_TAG_DOUBLE
-	GTypeTag = C.GI_TYPE_TAG_GTYPE
-	Utf8Tag = C.GI_TYPE_TAG_UTF8
+	VoidTag     = C.GI_TYPE_TAG_VOID
+	BooleanTag  = C.GI_TYPE_TAG_BOOLEAN
+	Int8Tag     = C.GI_TYPE_TAG_INT8
+	Uint8Tag    = C.GI_TYPE_TAG_UINT8
+	Int16Tag    = C.GI_TYPE_TAG_INT16
+	Uint16Tag   = C.GI_TYPE_TAG_UINT16
+	Int32Tag    = C.GI_TYPE_TAG_INT32
+	Uint32Tag   = C.GI_TYPE_TAG_UINT32
+	Int64Tag    = C.GI_TYPE_TAG_INT64
+	Uint64Tag   = C.GI_TYPE_TAG_UINT64
+	FloatTag    = C.GI_TYPE_TAG_FLOAT
+	DoubleTag   = C.GI_TYPE_TAG_DOUBLE
+	GTypeTag    = C.GI_TYPE_TAG_GTYPE
+	Utf8Tag     = C.GI_TYPE_TAG_UTF8
 	FilenameTag = C.GI_TYPE_TAG_FILENAME
 	// non-basic types
-	ArrayTag = C.GI_TYPE_TAG_ARRAY
+	ArrayTag     = C.GI_TYPE_TAG_ARRAY
 	InterfaceTag = C.GI_TYPE_TAG_INTERFACE
-	GListTag = C.GI_TYPE_TAG_GLIST
-	GSListTag = C.GI_TYPE_TAG_GSLIST
-	GHashTag = C.GI_TYPE_TAG_GHASH
-	ErrorTag = C.GI_TYPE_TAG_ERROR
+	GListTag     = C.GI_TYPE_TAG_GLIST
+	GSListTag    = C.GI_TYPE_TAG_GSLIST
+	GHashTag     = C.GI_TYPE_TAG_GHASH
+	ErrorTag     = C.GI_TYPE_TAG_ERROR
 	// another basic type
 	UnicharTag = C.GI_TYPE_TAG_UNICHAR
 )
@@ -156,16 +161,18 @@ func (info *BaseInfo) IsDeprecated() bool {
 }
 
 func (info *BaseInfo) GetAttribute(attr string) string {
-	_attr := GlibString(attr) ; defer C.g_free((C.gpointer)(_attr))
+	_attr := GlibString(attr)
+	defer C.g_free((C.gpointer)(_attr))
 	return GoString(C.g_base_info_get_attribute(info.ptr, _attr))
 }
 
 /* -- Callables -- */
 
 type Transfer C.GITransfer
+
 const (
-	Nothing = C.GI_TRANSFER_NOTHING
-	Container = C.GI_TRANSFER_CONTAINER
+	Nothing    = C.GI_TRANSFER_NOTHING
+	Container  = C.GI_TRANSFER_CONTAINER
 	Everything = C.GI_TRANSFER_EVERYTHING
 )
 
@@ -190,7 +197,8 @@ func (info *BaseInfo) MayReturnNull() bool {
 }
 
 func (info *BaseInfo) GetReturnAttribute(name string) string {
-	_name := GlibString(name) ; defer C.g_free((C.gpointer)(_name))
+	_name := GlibString(name)
+	defer C.g_free((C.gpointer)(_name))
 	return GoString(C.g_callable_info_get_return_attribute((*C.GICallableInfo)(info.ptr), _name))
 }
 
@@ -207,12 +215,12 @@ func (info *BaseInfo) GetArg(n int) *BaseInfo {
 /* -- Function Info -- */
 
 type FunctionFlags struct {
-	IsMethod bool
+	IsMethod      bool
 	IsConstructor bool
-	IsGetter bool
-	IsSetter bool
-	WrapsVFunc bool
-	Throws bool
+	IsGetter      bool
+	IsSetter      bool
+	WrapsVFunc    bool
+	Throws        bool
 }
 
 func NewFunctionFlags(bits C.GIFunctionInfoFlags) FunctionFlags {
@@ -249,15 +257,15 @@ func (info *BaseInfo) GetFunctionVFunc() *BaseInfo {
 /* -- Signal Info -- */
 
 type SignalFlags struct {
-	RunFirst bool
-	RunLast bool
-	RunCleanup bool
-	NoRecurse bool
-	Detailed bool
-	Action bool
-	NoHooks bool
+	RunFirst    bool
+	RunLast     bool
+	RunCleanup  bool
+	NoRecurse   bool
+	Detailed    bool
+	Action      bool
+	NoHooks     bool
 	MustCollect bool
-	Deprecated bool
+	Deprecated  bool
 }
 
 func NewSignalFlags(bits C.GSignalFlags) *SignalFlags {
@@ -291,10 +299,10 @@ func (info *BaseInfo) TrueStopsEmit() bool {
 /* -- VFunc Info -- */
 
 type VFuncFlags struct {
-	MustChainUp bool
-	MustOverride bool
+	MustChainUp     bool
+	MustOverride    bool
 	MustNotOverride bool
-	Throws bool
+	Throws          bool
 }
 
 func NewVFuncFlags(bits C.GIVFuncInfoFlags) *VFuncFlags {
@@ -479,17 +487,19 @@ func (info *BaseInfo) GetConstant(n int) *BaseInfo {
 /* -- Arg Info -- */
 
 type Direction C.GIDirection
+
 const (
-	In = C.GI_DIRECTION_IN
-	Out = C.GI_DIRECTION_OUT
+	In    = C.GI_DIRECTION_IN
+	Out   = C.GI_DIRECTION_OUT
 	InOut = C.GI_DIRECTION_INOUT
 )
 
 type ScopeType C.GIScopeType
+
 const (
-	Invalid = C.GI_SCOPE_TYPE_INVALID
-	Call = C.GI_SCOPE_TYPE_CALL
-	Async = C.GI_SCOPE_TYPE_ASYNC
+	Invalid  = C.GI_SCOPE_TYPE_INVALID
+	Call     = C.GI_SCOPE_TYPE_CALL
+	Async    = C.GI_SCOPE_TYPE_ASYNC
 	Notified = C.GI_SCOPE_TYPE_NOTIFIED
 )
 
@@ -530,10 +540,11 @@ func (info *BaseInfo) GetType() *BaseInfo {
 /* -- Type Info -- */
 
 type ArrayType C.GIArrayType
+
 const (
-	CArray = C.GI_ARRAY_TYPE_C
-	GArray = C.GI_ARRAY_TYPE_ARRAY
-	PtrArray = C.GI_ARRAY_TYPE_PTR_ARRAY
+	CArray    = C.GI_ARRAY_TYPE_C
+	GArray    = C.GI_ARRAY_TYPE_ARRAY
+	PtrArray  = C.GI_ARRAY_TYPE_PTR_ARRAY
 	ByteArray = C.GI_ARRAY_TYPE_BYTE_ARRAY
 )
 

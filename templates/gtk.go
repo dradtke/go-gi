@@ -6,4 +6,3 @@ package gtk
 // #include <gtk/gtkx.h>
 import "C"
 import "unsafe"
-

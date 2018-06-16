@@ -1,8 +1,8 @@
 package main
 
 import (
-	"container/list"
 	"bytes"
+	"container/list"
 	"errors"
 	"fmt"
 	"os"
@@ -24,19 +24,19 @@ type EnumValue struct {
 	Value    int64
 }
 
-func ProcessEnum(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, blacklist *map[string] bool) {
+func ProcessEnum(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, blacklist *map[string]bool) {
 	if info.IsDeprecated() {
 		return
 	}
 
 	name := info.GetName()
 	prefix := GetCPrefix(info.GetNamespace())
-	def := &EnumDefinition{EnumName:name, CType:prefix+name}
+	def := &EnumDefinition{EnumName: name, CType: prefix + name}
 
 	numValues := info.GetNEnumValues()
 	for i := 0; i < numValues; i++ {
 		value := info.GetEnumValue(i)
-		valDef := EnumValue{Name:CamelCase(value.GetName()), EnumName:name, Value:value.GetValue()}
+		valDef := EnumValue{Name: CamelCase(value.GetName()), EnumName: name, Value: value.GetValue()}
 		def.Values = append(def.Values, valDef)
 	}
 
@@ -68,7 +68,7 @@ func (info *BaseInfo) GetObjectDefinition() ObjectDefinition {
 	}
 }
 
-func ProcessObject(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, exists *map[string] bool, blacklist *map[string] bool) {
+func ProcessObject(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, exists *map[string]bool, blacklist *map[string]bool) {
 	if info.IsDeprecated() {
 		return
 	}
@@ -104,7 +104,7 @@ func ProcessObject(info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, 
 	}
 }
 
-func writeMethods(def *ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, exists *map[string] bool, blacklist *map[string] bool, className string) {
+func writeMethods(def *ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmpl *template.Template, exists *map[string]bool, blacklist *map[string]bool, className string) {
 	numMethods := info.GetNObjectMethods()
 	for i := 0; i < numMethods; i++ {
 		method := info.GetObjectMethod(i)
@@ -130,13 +130,13 @@ func writeMethods(def *ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmp
 		}
 
 		fn := FunctionDefinition{
-			Name:name,
-			Owner:def,
-			ClassName:def.ObjectName,
-			ForGo:ArgsAndRets{Args:goargs, Rets:gorets},
-			ForC:ArgsAndRets{Args:cargs, Rets:crets},
-			Flags:flags,
-			Info:method,
+			Name:      name,
+			Owner:     def,
+			ClassName: def.ObjectName,
+			ForGo:     ArgsAndRets{Args: goargs, Rets: gorets},
+			ForC:      ArgsAndRets{Args: cargs, Rets: crets},
+			Flags:     flags,
+			Info:      method,
 		}
 		if className != "" {
 			fn.ClassName = className
@@ -145,8 +145,10 @@ func writeMethods(def *ObjectDefinition, info *BaseInfo, code *bytes.Buffer, tmp
 		var marshal bytes.Buffer
 		for _, param := range cargs {
 			switch param.Dir {
-				case In, InOut: tmpl.ExecuteTemplate(&marshal, "c-marshal", param)
-				case Out: tmpl.ExecuteTemplate(&marshal, "c-decl", param)
+			case In, InOut:
+				tmpl.ExecuteTemplate(&marshal, "c-marshal", param)
+			case Out:
+				tmpl.ExecuteTemplate(&marshal, "c-decl", param)
 			}
 		}
 		fn.ArgMarshalBody = marshal.String()
@@ -206,15 +208,15 @@ type ArgsAndRets struct {
 }
 
 type FunctionDefinition struct {
-	Name string
-	Owner *ObjectDefinition
-	ClassName string
-	ForGo ArgsAndRets
-	ForC ArgsAndRets
+	Name           string
+	Owner          *ObjectDefinition
+	ClassName      string
+	ForGo          ArgsAndRets
+	ForC           ArgsAndRets
 	ArgMarshalBody string
 	RetMarshalBody string
-	Flags FunctionFlags
-	Info *BaseInfo
+	Flags          FunctionFlags
+	Info           *BaseInfo
 }
 
 func (def FunctionDefinition) GoName() string {
@@ -236,15 +238,15 @@ func (def FunctionDefinition) ReturnsValue() bool {
 func (def FunctionDefinition) Arglist(wrapper bool) string {
 	var result []string
 	index := 0
-	if (def.Owner != nil && !wrapper) {
-		result = make([]string, len(def.ForGo.Args) + 1)
+	if def.Owner != nil && !wrapper {
+		result = make([]string, len(def.ForGo.Args)+1)
 		result[index] = "self " + def.Owner.InterfaceName
 		index++
 	} else {
 		result = make([]string, len(def.ForGo.Args))
 	}
 	for i, arg := range def.ForGo.Args {
-		result[i + index] = arg.Name + " " + arg.GoType
+		result[i+index] = arg.Name + " " + arg.GoType
 	}
 	return strings.Join(result, ", ")
 }
@@ -260,8 +262,8 @@ func (def FunctionDefinition) Retlist() string {
 func (def FunctionDefinition) MarshaledValues() string {
 	var result []string
 	index := 0
-	if (def.Owner != nil) {
-		result = make([]string, len(def.ForC.Args) + 1)
+	if def.Owner != nil {
+		result = make([]string, len(def.ForC.Args)+1)
 		result[index] = "self." + def.Owner.CastFunc + "()"
 		index++
 	} else {
@@ -272,7 +274,7 @@ func (def FunctionDefinition) MarshaledValues() string {
 		if param.Dir == Out || param.Dir == InOut {
 			name = "&" + name
 		}
-		result[i + index] = name
+		result[i+index] = name
 	}
 	return strings.Join(result, ", ")
 }
@@ -282,11 +284,11 @@ func (def FunctionDefinition) CRet() Parameter {
 }
 
 type Parameter struct {
-	Name string
-	Dir Direction
+	Name   string
+	Dir    Direction
 	GoType string
-	CType string
-	Info *BaseInfo
+	CType  string
+	Info   *BaseInfo
 }
 
 func (val Parameter) CName() string {
@@ -320,7 +322,7 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 	if returnsValue(ret) {
 		var (
 			gotype, ctype string
-			ok bool
+			ok            bool
 		)
 		tag := ret.GetTag()
 		if tag == VoidTag && ret.IsPointer() {
@@ -334,7 +336,7 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 				return nil, nil, nil, nil, marshalError
 			}
 		}
-		cretList.PushBack(Parameter{Name:"retval", Dir:Out, GoType:gotype, CType:ctype, Info:nil})
+		cretList.PushBack(Parameter{Name: "retval", Dir: Out, GoType: gotype, CType: ctype, Info: nil})
 	}
 
 	n := info.GetNArgs()
@@ -345,7 +347,7 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 
 		var (
 			gotype, ctype string
-			ok bool
+			ok            bool
 		)
 		tag := param.GetType().GetTag()
 		if tag == VoidTag && param.GetType().IsPointer() {
@@ -366,7 +368,7 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 			}
 		}
 
-		p := Parameter{Name:name, Dir:dir, GoType:gotype, CType:ctype, Info:param}
+		p := Parameter{Name: name, Dir: dir, GoType: gotype, CType: ctype, Info: param}
 		cargList.PushBack(p)
 		if dir == In || dir == InOut {
 			goargList.PushBack(p)
@@ -377,26 +379,26 @@ func readParams(info *BaseInfo, flags FunctionFlags) ([]Parameter, []Parameter, 
 	}
 
 	if flags.Throws {
-		goretList.PushBack(Parameter{Name:"error", Dir:Out, GoType:"error", CType:"GError", Info:nil})
+		goretList.PushBack(Parameter{Name: "error", Dir: Out, GoType: "error", CType: "GError", Info: nil})
 	}
 
 	goArgs := make([]Parameter, goargList.Len())
-	for e, i := goargList.Front(), 0; e != nil; e, i = e.Next(), i + 1 {
+	for e, i := goargList.Front(), 0; e != nil; e, i = e.Next(), i+1 {
 		goArgs[i] = e.Value.(Parameter)
 	}
 
 	goRets := make([]Parameter, goretList.Len())
-	for e, i := goretList.Front(), 0; e != nil; e, i = e.Next(), i + 1 {
+	for e, i := goretList.Front(), 0; e != nil; e, i = e.Next(), i+1 {
 		goRets[i] = e.Value.(Parameter)
 	}
 
 	cArgs := make([]Parameter, cargList.Len())
-	for e, i := cargList.Front(), 0; e != nil; e, i = e.Next(), i + 1 {
+	for e, i := cargList.Front(), 0; e != nil; e, i = e.Next(), i+1 {
 		cArgs[i] = e.Value.(Parameter)
 	}
 
 	cRets := make([]Parameter, cretList.Len())
-	for e, i := cretList.Front(), 0; e != nil; e, i = e.Next(), i + 1 {
+	for e, i := cretList.Front(), 0; e != nil; e, i = e.Next(), i+1 {
 		cRets[i] = e.Value.(Parameter)
 	}
 

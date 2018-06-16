@@ -91,7 +91,7 @@ func main() {
 		log.Fatal("no writable output directory found")
 	}
 
-	startingPoint, err := os.Open(filepath.Join(giTemplates, ns + ".go"))
+	startingPoint, err := os.Open(filepath.Join(giTemplates, ns+".go"))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return
@@ -103,7 +103,7 @@ func main() {
 		return
 	}
 
-	blacklist := make(map[string] bool)
+	blacklist := make(map[string]bool)
 	if f, err := os.Open(filepath.Join(giBlacklist, ns)); err == nil {
 		if data, err := ioutil.ReadAll(f); err == nil {
 			lines := strings.Split(string(data), "\n")
@@ -122,19 +122,21 @@ func main() {
 	tmpl := template.Must(template.New("go-gi").ParseGlob(filepath.Join(giSnippets, "*")))
 
 	// used to prevent duplicate methods, interfaces, etc.
-	exists := make(map[string] bool)
+	exists := make(map[string]bool)
 
 	n := GetNumInfos(namespace)
 	for i := 0; i < n; i++ {
 		info := GetInfo(namespace, i)
 		switch info.Type {
-			case Enum: ProcessEnum(info, &code, tmpl, &blacklist)
-			case Object: ProcessObject(info, &code, tmpl, &exists, &blacklist)
+		case Enum:
+			ProcessEnum(info, &code, tmpl, &blacklist)
+		case Object:
+			ProcessObject(info, &code, tmpl, &exists, &blacklist)
 		}
 		info.Free()
 	}
 
-	file, err := os.Create(filepath.Join(outputDir, ns + ".go"))
+	file, err := os.Create(filepath.Join(outputDir, ns+".go"))
 	if err != nil {
 		log.Fatal(err.Error())
 	}
