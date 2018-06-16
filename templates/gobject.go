@@ -5,4 +5,3 @@ package gobject
 // #include <glib-object.h>
 import "C"
 import "unsafe"
-

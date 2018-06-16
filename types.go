@@ -9,7 +9,7 @@ import "C"
 const GoVoidPointer = "interface{}"
 const CVoidPointer = "gpointer"
 
-var TypeTagToGo = map[TypeTag] string {
+var TypeTagToGo = map[TypeTag]string{
 	VoidTag:     "",
 	BooleanTag:  "bool",
 	Int8Tag:     "int8",
@@ -27,18 +27,18 @@ var TypeTagToGo = map[TypeTag] string {
 	FilenameTag: "string",
 	// TODO: figure out how to do complex types
 	/*
-	ArrayTag
-	InterfaceTag
-	GListTag
-	GSListTag
-	GHashTag
-	ErrorTag
+		ArrayTag
+		InterfaceTag
+		GListTag
+		GSListTag
+		GHashTag
+		ErrorTag
 	*/
 	// another basic type
 	//UnicharTag
 }
 
-var TypeTagToC = map[TypeTag] string {
+var TypeTagToC = map[TypeTag]string{
 	VoidTag:     "",
 	BooleanTag:  "gboolean",
 	Int8Tag:     "gint8",
